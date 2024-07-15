@@ -1,4 +1,4 @@
-# Real-time SMPL-X fitting with ZED camera body tracking with
+# Real-time SMPL-X fitting with ZED camera body tracking module
 
 This is the Unity Project for using the body tracking module of the Stereolabs Zed Unity module for the animation of a SMPL-X model.
 It supports just body joint angles tracking since the Zed Body Tracking module generates just the skeleton. The accuracy of the depth of the model is higher than using SOTA RGB methods like [HybriIK](https://github.com/Jeff-sjtu/HybrIK) since the body tracking module leverage on the stereo vision of the Zed camera.
