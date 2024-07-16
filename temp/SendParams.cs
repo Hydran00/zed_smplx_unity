@@ -1,3 +1,7 @@
+/*
+This code is used to extract the SMPLX parameters from the humanoid avatar and publish them to the ROS network for 
+recreating the SMPLX mesh in Python using the SMPLX Python library.
+*/
 using System;
 using Unity.Robotics.ROSTCPConnector;
 using Unity.Robotics.ROSTCPConnector.ROSGeometry;
