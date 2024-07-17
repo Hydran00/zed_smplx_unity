@@ -10,6 +10,7 @@ import sys
 import open3d as o3d
 import smplx
 import pickle
+import os
 
 NUM_BETAS = 10;
 NUM_EXPRESSIONS = 10;
@@ -32,9 +33,10 @@ class SMPLXVisualizer(Node):
             '/smpl_params',
             self.listener_callback,
             10)
+        self.gender = 'male'
         self.subscription
         self.smplx_model = smplx.create('../models/smplx/SMPLX_MALE.npz', model_type='smplx',
-                                  gender='male', ext='npz', num_betas=NUM_BETAS, num_expressions=NUM_EXPRESSIONS, use_pca=False).to(DEVICE)
+                                  gender=self.gender, ext='npz', num_betas=NUM_BETAS, num_expressions=NUM_EXPRESSIONS, use_pca=False).to(DEVICE)
         
         self.viz = o3d.visualization.Visualizer()
         self.viz.create_window()
@@ -46,7 +48,8 @@ class SMPLXVisualizer(Node):
         
         self.mesh = o3d.geometry.TriangleMesh()
         
-        self.srv = self.create_service(Empty, 'dump_smplx_parameters', self.dump_params_callback)
+        self.srv1 = self.create_service(Empty, 'dump_smplx_parameters', self.dump_smplx_params_callback)
+        self.srv2 = self.create_service(Empty, 'dump_smpl_parameters', self.dump_smpl_params_callback)
         
         print("Node Started")
         
@@ -122,10 +125,12 @@ class SMPLXVisualizer(Node):
         self.viz.poll_events()
         self.viz.update_renderer()
 
-    def dump_params_callback(self, request, response):
-        with open('~/smplx_params.pkl', 'wb') as f:
+    def dump_smplx_params_callback(self, request, response):
+        # get home path
+        with open(os.path.expanduser("~")+'/smplx_params.pkl', 'wb') as f:
             pickle.dump({
                 'betas': self.betas,
+                'gender': self.gender,
                 'global_orient': self.global_orient,
                 'body_pose': self.body_pose,
                 'jaw_pose': self.jaw_pose,
@@ -136,6 +141,19 @@ class SMPLXVisualizer(Node):
                 'expression': self.expression
             }, f)
         print("Dumped SMPLX Parameters")
+        return response
+
+    def dump_smpl_params_callback(self, request, response):
+        # get home path
+        with open(os.path.expanduser("~")+'/smpl_params.pkl', 'wb') as f:
+            pickle.dump({
+                'betas': self.betas,
+                'gender': self.gender,
+                'global_orient_axis_angle': self.global_orient,
+                # SMPL has 2 hand joints
+                'body_pose_axis_angle': torch.cat([self.body_pose, torch.tensor([[0, 0, 0]]).to(DEVICE), torch.tensor([[0, 0, 0]]).to(DEVICE)], dim=1),
+            }, f)
+        print("Dumped SMPL Parameters")
         return response
 
 def main(args=None):
