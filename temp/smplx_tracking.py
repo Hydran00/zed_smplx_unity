@@ -2,28 +2,21 @@
 
 import rclpy
 from rclpy.node import Node
+from std_srvs.srv import Empty  # Import the Empty service type
 from std_msgs.msg import Float32MultiArray
 import numpy as np
 import torch
 import sys
-import numpy as np
 import open3d as o3d
 import smplx
-from scipy.spatial.transform import Rotation as R
+import pickle
+NUM_BETAS = 10
+NUM_EXPRESSIONS = 10
+NUM_JOINTS = 55
+NUM_BODY_JOINTS = 21
 
-
-NUM_BETAS = 10;
-NUM_EXPRESSIONS = 10;
-NUM_JOINTS = 55;
-NUM_BODY_JOINTS = 21;
-
-HAND_JOINTS = 15;
+HAND_JOINTS = 15
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-# VISUALIZE
-
-# show wireframe
 
 class SMPLXVisualizer(Node):
     def __init__(self):
@@ -36,14 +29,6 @@ class SMPLXVisualizer(Node):
         self.subscription
         self.smplx_model = smplx.create('../models/smplx/SMPLX_MALE.npz', model_type='smplx',
                                   gender='male', ext='npz', num_betas=NUM_BETAS, num_expressions=NUM_EXPRESSIONS, use_pca=False).to(DEVICE)
-
-                                  
-        # self.betas = torch.tensor(np.zeros(NUM_BETAS)).to(DEVICE) 
-        # self.expression = torch.tensor(np.zeros(NUM_EXPRESSIONS)).to(DEVICE)
-        # self.body_pose = torch.zeros(3*NUM_JOINTS).to(DEVICE)
-        # self.left_hand_pose = torch.zeros(3*HAND_JOINTS).to(DEVICE)
-        # self.right_hand_pose = torch.zeros(3*HAND_JOINTS).to(DEVICE)
-    
         
         self.viz = o3d.visualization.Visualizer()
         self.viz.create_window()
@@ -52,6 +37,10 @@ class SMPLXVisualizer(Node):
         opt.background_color = np.asarray([0.5, 0.5, 0.5])
         opt.mesh_show_wireframe = True
         self.first = True
+        
+        self.mesh = o3d.geometry.TriangleMesh()
+        
+        self.srv = self.create_service(Empty, 'dump_smplx_parameters', self.dump_params_callback)
         
         print("Node Started")
         
@@ -85,49 +74,16 @@ class SMPLXVisualizer(Node):
         left_hand_pose_end = left_hand_pose_start + HAND_JOINTS * 3
         self.left_hand_pose = torch.tensor(parameters[left_hand_pose_start:left_hand_pose_end]).reshape(1, HAND_JOINTS * 3).to(DEVICE)
         
-        # print("Received Parameters with the following shapes:")
-        # print("Betas: ", self.betas.shape)
-        # print("Expression: ", self.expression.shape)
-        print("Body Pose: ", self.body_pose.shape)
-        # print("Right Hand Pose: ", self.right_hand_pose.shape)
-        # print("Left Hand Pose: ", self.left_hand_pose.shape)
-    
         self.visualize_model()
 
     def visualize_model(self):
 
-        if self.first:
-            self.mesh = o3d.geometry.TriangleMesh()
-        
-        # create a copy
-        # old_bodypose = self.body_pose.clone()
-        # self.body_pose[0,:] = 0.0
-        
-        
-        # # start = 17 * 3
-        # # end = 18 * 3
-        
-        # r = R.from_rotvec(self.body_pose[0,16*3:16*3+3].detach().cpu().numpy())
-        # euler = r.as_euler('xyz')
-        
-        
-        # self.body_pose[0,16*3] = old_bodypose[0,16*3]
-        # self.body_pose[0,16*3 +1 ] = old_bodypose[0,16*3 +1]
-        # self.body_pose[0,16*3 +2 ] = old_bodypose[0,16*3 +2]
-        
-        # print("Shoulder Euler: ", euler)
-        # print("Shoulder: ", self.body_pose[0,16*3:16*3+3])
-        
-        
-        # print(self.body_pose)
         output = self.smplx_model(
             betas=self.betas,
-            # 180 deg on z axis
             global_orient=self.global_orient,
             body_pose=self.body_pose,
             left_hand_pose=self.left_hand_pose,
             right_hand_pose=self.right_hand_pose,
-            # transl=transl,
             expression=self.expression,
             return_verts=True,
             return_full_pose=False
@@ -145,7 +101,20 @@ class SMPLXVisualizer(Node):
         self.viz.update_geometry(self.mesh)
         self.viz.poll_events()
         self.viz.update_renderer()
-        
+
+    def dump_params_callback(self, request, response):
+        with open('/home/hydran00/smplx_params.pkl', 'wb') as f:
+            pickle.dump({
+                'betas': self.betas,
+                'global_orient': self.global_orient,
+                'body_pose': self.body_pose,
+                'left_hand_pose': self.left_hand_pose,
+                'right_hand_pose': self.right_hand_pose,
+                'expression': self.expression
+            }, f)
+        print("Dumped SMPLX Parameters")
+        return response
+
 def main(args=None):
     rclpy.init(args=args)
     node = SMPLXVisualizer()

@@ -2,3 +2,4 @@ models
 __pycache__
 *.json
 *.png
+*.ply
