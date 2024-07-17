@@ -62,3 +62,41 @@ make
 ./ZED_LiveLink_Mono
 ```
 4. You will see the ip address and port used for multicast communication. Annotate them and set them in the `FusionManager` inspector in Unity in the `ZED Streaming Client` section
+
+## Retrieving the SMPL-X model using Python
+Inside the `utils` folder you can find the C# program called `SendParams.cs` that I use in Unity to send the parameters of the SMPL-X model to the `smplx_tracking.py` script.  
+I used ROS2 and [Unity TCP Endpoint](https://github.com/Unity-Technologies/ROS-TCP-Connector) but you can rewrite it using a simple TCP client-server architecture.  
+
+### Python dependecies
+- smplx
+- open3d
+
+You can install them using pip:
+```bash
+pip install smplx open3d
+```
+
+The C# program works if change the visibility of the following variables in the `SMPLX.cs` script under `Assets/SMPLX-Unity/Assets/SMPLX/Scripts` from `private` to `public`:
+```
+_bodyJointNames
+_transformFromName
+```
+
+Also you need to define a constant name for the prefab instantiated by the ZED Unity plugin.  
+You need to add the following line in the `SkeletonHandler.cs` script under `Assets/ZEDFusion/Scripts`:
+```csharp
+humanoid.name = "Humanoid";
+```
+In this way the `SendParams.cs` program can retrieve the gameobject correctly at run-time.
+
+### Run the script
+I avoided creating a ROS2 package since it is a simple script. You can run it using the following command:
+```bash
+python3 smplx_tracking smplx_tracking.py
+```
+Then press play in Unity and finally run the ROS TCP Endpoint to create the connection. 
+### Dump SMPL-X parameters
+I created a ROS2 service in the `smplx_tracking.py` script that dumps the SMPL-X parameters in a file. 
+```
+ros2 service call /dump_smplx_parameters std_srvs/srv/Empty "{}"
+```
