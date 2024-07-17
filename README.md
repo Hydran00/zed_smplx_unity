@@ -67,6 +67,10 @@ make
 Inside the `utils` folder you can find the C# program called `SendParams.cs` that I use in Unity to send the parameters of the SMPL-X model to the `smplx_tracking.py` script.  
 I used ROS2 and [Unity TCP Endpoint](https://github.com/Unity-Technologies/ROS-TCP-Connector) but you can rewrite it using a simple TCP client-server architecture.  
 
+
+https://github.com/user-attachments/assets/2f34e494-09b7-45c2-9365-01a61793e382
+
+
 ### Python dependecies
 - smplx
 - open3d
